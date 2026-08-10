@@ -402,26 +402,36 @@
     backdropEl = b;
   }
 
+  function applyToggleMargins(wrap, ref) {
+    if (!ref) return;
+    const cs = window.getComputedStyle(ref);
+    const mt = parseFloat(cs.marginTop) || 0;
+    const ml = parseFloat(cs.marginLeft) || 0;
+    const mr = parseFloat(cs.marginRight) || 0;
+    const hidden = !document.querySelector(".scrubber-wrapper");
+    const side = hidden ? 5 : ml;
+    wrap.style.marginLeft = side + "px";
+    wrap.style.marginRight = (hidden ? 5 : mr) + "px";
+    wrap.style.marginTop = (hidden ? 5 : Math.max(0, mt - (parseFloat(cs.marginBottom) || 0))) + "px";
+    let pb = (parseFloat(cs.marginBottom) || 0);
+    if (ref.parentNode) {
+      pb += parseFloat(window.getComputedStyle(ref.parentNode).paddingBottom) || 0;
+    }
+    wrap.style.marginBottom = Math.max(0, mt - pb) + "px";
+  }
+
   function buildToggle(ref) {
-    if (toggleEl && toggleEl.isConnected) return;
+    if (toggleEl && toggleEl.isConnected) {
+      const wrap = toggleEl.parentNode;
+      if (wrap && ref && wrap.previousElementSibling !== ref) {
+        insertAfter(wrap, ref);
+      }
+      applyToggleMargins(wrap, ref);
+      return;
+    }
     const wrap = document.createElement("div");
     wrap.className = "full-scrubber-toggle-wrap";
-    if (ref) {
-      const cs = window.getComputedStyle(ref);
-      const mt = parseFloat(cs.marginTop) || 0;
-      const ml = parseFloat(cs.marginLeft) || 0;
-      const mr = parseFloat(cs.marginRight) || 0;
-      const hidden = !document.querySelector(".scrubber-wrapper");
-      const side = hidden ? 5 : ml;
-      wrap.style.marginLeft = side + "px";
-      wrap.style.marginRight = (hidden ? 5 : mr) + "px";
-      wrap.style.marginTop = (hidden ? 5 : Math.max(0, mt - (parseFloat(cs.marginBottom) || 0))) + "px";
-      let pb = (parseFloat(cs.marginBottom) || 0);
-      if (ref.parentNode) {
-        pb += parseFloat(window.getComputedStyle(ref.parentNode).paddingBottom) || 0;
-      }
-      wrap.style.marginBottom = Math.max(0, mt - pb) + "px";
-    }
+    applyToggleMargins(wrap, ref);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "full-scrubber-toggle";
