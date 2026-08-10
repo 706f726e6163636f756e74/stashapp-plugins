@@ -1,4 +1,3 @@
----
 description: Scene Thumbnails adds a dismissable thumbnail grid built in the browser from Stash's existing scene sprite, shown in a drawer at the bottom of the scene panel, with a live highlight that follows playback and thumbnail-size and full-height toggles.
 name: Scene Thumbnails
 ui:
