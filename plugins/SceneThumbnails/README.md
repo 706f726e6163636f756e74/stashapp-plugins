@@ -6,7 +6,7 @@ Built entirely in the browser from Stash's existing scene sprite and WebVTT — 
 
 ## Features
 
-- Thumbnail grid in a dismissable drawer at the bottom of the scene panel (open with the "Scene Thumbnails" toggle below the video)
+- Thumbnail grid in a dismissable drawer at the bottom of the scene panel (open with the film icon button in the scene page toolbar)
 - Click a tile to seek to that point in the video; clicking a tile dismisses the drawer
 - Live highlight that tracks playback position
 

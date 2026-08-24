@@ -8,9 +8,10 @@
  * 2026-08-06: the poster overlay was replaced with a scrubber shown in a
  * drawer that hovers above the bottom of the scene page, styled like the
  * Stash collapsible sidebar sections, with a live playback highlight and a
- * thumbnail-size toggle and a full-height toggle. The drawer is opened via the
- * "Scene Thumbnails" button below the native scrubber and dismissed by clicking a
- * tile, the backdrop, the header, or Escape. The thumbnail grid fills the width
+ * thumbnail-size toggle and a full-height toggle. The drawer is opened via a
+ * film icon button in the scene page toolbar (next to the organized and
+ * operations controls) and dismissed by clicking a tile, the backdrop, the
+ * header, or Escape. The thumbnail grid fills the width
   * of the drawer; the slider selects how many thumbnails sit per row (1, 2, 3, 4,
   * 6, or 12 — divisors of 12 so each row fills completely; left-to-right the
   * slider goes small-to-large, i.e. 12 → 1 per row) using the gallery's
@@ -23,12 +24,10 @@
   "use strict";
 
   const IDRE = /^\/scenes\/(\d+)(?:\/|$)/;
-  const CHEV_UP =
-    "M201.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L224 173.3 54.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z";
   const CHEV_DOWN =
     "M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z";
   const ICON_FILM =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="7" y1="3" x2="7" y2="21"/><line x1="17" y1="3" x2="17" y2="21"/></svg>';
+    '<svg xmlns="http://www.w3.org/2000/svg" class="svg-inline--fa fa-icon" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="film" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M0 96C0 60.7 28.7 32 64 32l384 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM48 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm368-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm368-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 112l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16L64 96c-8.8 0-16 7.2-16 16zM416 96c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM160 128l0 64c0 17.7 14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32L192 96c-17.7 0-32 14.3-32 32zm32 160c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32l-128 0z"/></svg>';
   const ICON_EXPAND =
     "M32 32C14.3 32 0 46.3 0 64l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 32zM64 352c0-17.7-14.3-32-32-32S0 334.3 0 352l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96z";
   const ICON_COMPRESS =
@@ -62,7 +61,7 @@
   let currentVideo = null;
   let syncTimer = null;
   let scrubberFor = null;
-  let toggleEl = null;
+  let toolbarBtnEl = null;
   let drawerEl = null;
   let drawerTiles = null;
   let drawerContent = null;
@@ -301,7 +300,6 @@
       const startStr = fmt(c.t);
       const endStr = fmt(nextStart);
       const tile = document.createElement("div");
-      tile.className = "scene-mosaic-tile";
       tile.title = startStr + " - " + endStr;
       tile.style.cssText =
         "width:" +
@@ -344,18 +342,11 @@
     updateHighlight(lastVideoTime);
   }
 
-  function insertAfter(node, ref) {
-    if (!ref || !ref.parentNode) return;
-    ref.parentNode.insertBefore(node, ref.nextSibling);
-  }
-
   function ensureStyles() {
     if (document.getElementById("full-scrubber-styles")) return;
     const s = document.createElement("style");
     s.id = "full-scrubber-styles";
     s.textContent =
-      ".full-scrubber-toggle{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.55rem;background:transparent;border:1px solid #3b4853;border-radius:.25rem;color:#c8cdd4;cursor:pointer;font-size:.8rem;}" +
-      ".full-scrubber-toggle:hover{border-color:#4a9eff;color:#fff;}" +
       ".full-scrubber-backdrop{position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;}" +
       ".full-scrubber-backdrop.open{opacity:1;pointer-events:auto;}" +
       ".full-scrubber-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
@@ -367,7 +358,7 @@
       ".full-scrubber-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".full-scrubber-drawer .full-scrubber-sizes{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".full-scrubber-drawer .full-scrubber-size-control{display:flex;align-items:center;gap:.5rem;}" +
-      ".full-scrubber-drawer .full-scrubber-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:2rem;}" +
+      ".full-scrubber-drawer .full-scrubber-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
       ".full-scrubber-tiles{display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;overflow-y:auto;padding:0 .5rem .5rem;}";
     document.head.appendChild(s);
   }
@@ -402,47 +393,30 @@
     backdropEl = b;
   }
 
-  function applyToggleMargins(wrap, ref) {
-    if (!ref) return;
-    const cs = window.getComputedStyle(ref);
-    const mt = parseFloat(cs.marginTop) || 0;
-    const ml = parseFloat(cs.marginLeft) || 0;
-    const mr = parseFloat(cs.marginRight) || 0;
-    const hidden = !document.querySelector(".scrubber-wrapper");
-    const side = hidden ? 5 : ml;
-    wrap.style.marginLeft = side + "px";
-    wrap.style.marginRight = (hidden ? 5 : mr) + "px";
-    wrap.style.marginTop = (hidden ? 5 : Math.max(0, mt - (parseFloat(cs.marginBottom) || 0))) + "px";
-    let pb = (parseFloat(cs.marginBottom) || 0);
-    if (ref.parentNode) {
-      pb += parseFloat(window.getComputedStyle(ref.parentNode).paddingBottom) || 0;
-    }
-    wrap.style.marginBottom = Math.max(0, mt - pb) + "px";
-  }
-
-  function buildToggle(ref) {
-    if (toggleEl && toggleEl.isConnected) {
-      const wrap = toggleEl.parentNode;
-      if (wrap && ref && wrap.previousElementSibling !== ref) {
-        insertAfter(wrap, ref);
-      }
-      applyToggleMargins(wrap, ref);
-      return;
-    }
-    const wrap = document.createElement("div");
-    wrap.className = "full-scrubber-toggle-wrap";
-    applyToggleMargins(wrap, ref);
+  function buildToolbarButton() {
+    if (toolbarBtnEl && toolbarBtnEl.isConnected) return;
+    const toolbar = document.querySelector(".scene-tabs .scene-toolbar");
+    if (!toolbar) return;
+    const groups = toolbar.querySelectorAll(".scene-toolbar-group");
+    const group = groups[groups.length - 1];
+    if (!group) return;
+    const wrap = document.createElement("span");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "full-scrubber-toggle";
-    btn.innerHTML = ICON_FILM + '<span class="full-scrubber-toggle-label">Scene Thumbnails</span>';
+    btn.className = "btn btn-secondary minimal full-scrubber-toolbar-btn";
+    btn.title = "Scene Thumbnails";
+    btn.setAttribute("aria-label", "Scene Thumbnails");
+    btn.innerHTML = ICON_FILM;
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
     });
     wrap.appendChild(btn);
-    insertAfter(wrap, ref);
-    toggleEl = btn;
+    const opsBtn = group.querySelector("#operation-menu");
+    const opsSpan = opsBtn ? opsBtn.closest("span") : null;
+    if (opsSpan && opsSpan.parentNode === group) group.insertBefore(wrap, opsSpan);
+    else group.appendChild(wrap);
+    toolbarBtnEl = btn;
     updateToggle();
   }
 
@@ -594,10 +568,10 @@
   }
 
   function updateToggle() {
-    if (!toggleEl) return;
-    const label = toggleEl.querySelector(".full-scrubber-toggle-label");
-    if (!label) return;
-    label.textContent = drawerOpen ? "Hide Scene Thumbnails" : "Scene Thumbnails";
+    if (!toolbarBtnEl) return;
+    toolbarBtnEl.classList.toggle("active", drawerOpen);
+    toolbarBtnEl.title = drawerOpen ? "Hide Scene Thumbnails" : "Scene Thumbnails";
+    toolbarBtnEl.setAttribute("aria-pressed", String(drawerOpen));
   }
 
   function buildDrawer(id, data) {
@@ -629,12 +603,18 @@
   }
 
   function teardown() {
-    if (toggleEl) {
+    if (toolbarBtnEl) {
+      const toolbarWrap = toolbarBtnEl.parentNode;
       try {
-        toggleEl.remove();
+        toolbarBtnEl.remove();
       } catch (e) { }
+      if (toolbarWrap && toolbarWrap.tagName === "SPAN" && !toolbarWrap.firstChild) {
+        try {
+          toolbarWrap.remove();
+        } catch (e) { }
+      }
     }
-    toggleEl = null;
+    toolbarBtnEl = null;
     if (drawerEl) {
       try {
         drawerEl.remove();
@@ -709,11 +689,7 @@
 
     getData(id).then((data) => {
       if (!data) return;
-      const anchor =
-        document.querySelector(".scrubber-wrapper") ||
-        document.querySelector(".video-wrapper") ||
-        document.querySelector(".video-js");
-      buildToggle(anchor);
+      buildToolbarButton();
       buildDrawer(id, data);
     });
   }
