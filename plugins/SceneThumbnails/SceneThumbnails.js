@@ -326,7 +326,7 @@
       ".scene-thumbs-drawer .collapse,.scene-thumbs-drawer .collapsing{padding-top:0;}" +
       ".scene-thumbs-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .collapse-button .scene-thumbs-chevron{margin-left:auto;}" +
-      ".scene-thumbs-drawer .scene-thumbs-sizes{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
       ".scene-thumbs-tiles{display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;overflow-y:auto;padding:0 .5rem .5rem;}";
@@ -394,7 +394,7 @@
 
   function buildSizes() {
     const wrap = document.createElement("div");
-    wrap.className = "scene-thumbs-sizes";
+    wrap.className = "scene-thumbs-toolbar";
 
     const control = document.createElement("div");
     control.className = "scene-thumbs-size-control";
