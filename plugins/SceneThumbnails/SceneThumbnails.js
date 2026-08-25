@@ -24,39 +24,26 @@
   "use strict";
 
   const IDRE = /^\/scenes\/(\d+)(?:\/|$)/;
-  const CHEV_DOWN =
-    "M201.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 338.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z";
-  const ICON_FILM =
-    '<svg xmlns="http://www.w3.org/2000/svg" class="svg-inline--fa fa-icon" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="film" role="img" viewBox="0 0 512 512"><path fill="currentColor" d="M0 96C0 60.7 28.7 32 64 32l384 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM48 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm368-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm368-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 112l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16L64 96c-8.8 0-16 7.2-16 16zM416 96c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM160 128l0 64c0 17.7 14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32L192 96c-17.7 0-32 14.3-32 32zm32 160c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32l-128 0z"/></svg>';
-  const ICON_EXPAND =
-    "M32 32C14.3 32 0 46.3 0 64l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L32 32zM64 352c0-17.7-14.3-32-32-32S0 334.3 0 352l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 32c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM448 352c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96z";
-  const ICON_COMPRESS =
-    "M160 64c0-17.7-14.3-32-32-32S96 46.3 96 64l0 64-64 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c17.7 0 32-14.3 32-32l0-96zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 0 64c0 17.7 14.3 32 32 32s32-14.3 32-32l0-96c0-17.7-14.3-32-32-32l-96 0zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 96c0 17.7 14.3 32 32 32l96 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0 0-64zM320 320c-17.7 0-32 14.3-32 32l0 96c0 17.7 14.3 32 32 32s32-14.3 32-32l0-64 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0z";
   const COL_OPTIONS = [1, 2, 3, 4, 6, 12];
   const TILE_GAP = 2;
   const COL_OPTION_COUNT = COL_OPTIONS.length;
 
-  function svgChevron(d, name) {
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" class="svg-inline--fa fa-fw" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="' +
-      name +
-      '" role="img" viewBox="0 0 448 512"><path fill="currentColor" d="' +
-      d +
-      '"/></svg>'
-    );
+  function faIconNode(iconDef) {
+    const [width, height, , , pathData] = iconDef.icon;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+    svg.classList.add("svg-inline--fa", "fa-icon");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("fill", "currentColor");
+    path.setAttribute("d", pathData);
+    svg.appendChild(path);
+    return svg;
   }
 
-  function svgIcon(d, name, viewBox) {
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" class="svg-inline--fa fa-fw" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="' +
-      name +
-      '" role="img" viewBox="' +
-      viewBox +
-      '"><path fill="currentColor" d="' +
-      d +
-      '"/></svg>'
-    );
-  }
+  const faLib =
+    (window.PluginApi && window.PluginApi.libraries && window.PluginApi.libraries.FontAwesomeSolid) || null;
 
   let currentVideo = null;
   let syncTimer = null;
@@ -82,6 +69,10 @@
       const idx = COL_OPTIONS.indexOf(val);
       if (idx !== -1) colIndex = idx;
     }
+  } catch (e) { }
+
+  try {
+    drawerMaximized = localStorage.getItem("sceneThumbnails.maximized") === "1";
   } catch (e) { }
 
   function tilesPerRow() {
@@ -356,6 +347,7 @@
       ".full-scrubber-drawer .collapse-header{padding:0;}" +
       ".full-scrubber-drawer .collapse,.full-scrubber-drawer .collapsing{padding-top:0;}" +
       ".full-scrubber-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
+      ".full-scrubber-drawer .collapse-button .full-scrubber-chevron{margin-left:auto;}" +
       ".full-scrubber-drawer .full-scrubber-sizes{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".full-scrubber-drawer .full-scrubber-size-control{display:flex;align-items:center;gap:.5rem;}" +
       ".full-scrubber-drawer .full-scrubber-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
@@ -370,12 +362,24 @@
     btn.type = "button";
     btn.className = "minimal collapse-button";
     btn.title = "Close";
-    const icon = document.createElement("span");
-    icon.innerHTML = svgChevron(CHEV_DOWN, "chevron-down");
+    if (faLib && faLib.faTable) {
+      btn.appendChild(faIconNode(faLib.faTable));
+    } else {
+      const fallback = document.createElement("i");
+      fallback.className = "fas fa-table fa-fw";
+      btn.appendChild(fallback);
+    }
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
-    btn.appendChild(icon);
+    const chevronIcon = document.createElement("span");
+    chevronIcon.className = "full-scrubber-chevron";
+    if (faLib && faLib.faChevronDown) {
+      chevronIcon.appendChild(faIconNode(faLib.faChevronDown));
+    } else {
+      chevronIcon.innerHTML = '<i class="fas fa-chevron-down fa-fw"></i>';
+    }
     btn.appendChild(label);
+    btn.appendChild(chevronIcon);
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       closeDrawer();
@@ -406,7 +410,13 @@
     btn.className = "btn btn-secondary minimal full-scrubber-toolbar-btn";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
-    btn.innerHTML = ICON_FILM;
+    if (faLib && faLib.faTable) {
+      btn.appendChild(faIconNode(faLib.faTable));
+    } else {
+      const fallback = document.createElement("i");
+      fallback.className = "fas fa-table fa-fw";
+      btn.appendChild(fallback);
+    }
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
@@ -470,8 +480,16 @@
     const maxBtn = document.createElement("button");
     maxBtn.type = "button";
     maxBtn.className = "btn btn-secondary btn-sm full-scrubber-maximize";
-    maxBtn.title = "Maximize";
-    maxBtn.innerHTML = svgIcon(ICON_EXPAND, "expand", "0 0 448 512");
+    maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
+    if (faLib) {
+      const iconDef = drawerMaximized ? faLib.faCompress : faLib.faExpand;
+      if (iconDef) maxBtn.appendChild(faIconNode(iconDef));
+    }
+    if (!maxBtn.firstChild) {
+      const fallback = document.createElement("i");
+      fallback.className = "fas " + (drawerMaximized ? "fa-compress" : "fa-expand") + " fa-fw";
+      maxBtn.appendChild(fallback);
+    }
     maxBtn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleMaximize();
@@ -491,16 +509,24 @@
 
   function toggleMaximize() {
     drawerMaximized = !drawerMaximized;
+    try {
+      localStorage.setItem("sceneThumbnails.maximized", drawerMaximized ? "1" : "0");
+    } catch (e) { }
     if (drawerEl) drawerEl.classList.toggle("maximized", drawerMaximized);
     if (sizesEl) {
       const btn = sizesEl.querySelector(".full-scrubber-maximize");
       if (btn) {
         btn.title = drawerMaximized ? "Restore" : "Maximize";
-        btn.innerHTML = svgIcon(
-          drawerMaximized ? ICON_COMPRESS : ICON_EXPAND,
-          drawerMaximized ? "compress" : "expand",
-          "0 0 448 512"
-        );
+        btn.innerHTML = "";
+        if (faLib) {
+          const iconDef = drawerMaximized ? faLib.faCompress : faLib.faExpand;
+          if (iconDef) btn.appendChild(faIconNode(iconDef));
+        }
+        if (!btn.firstChild) {
+          const fallback = document.createElement("i");
+          fallback.className = "fas " + (drawerMaximized ? "fa-compress" : "fa-expand") + " fa-fw";
+          btn.appendChild(fallback);
+        }
       }
     }
   }
@@ -581,7 +607,7 @@
 
     const drawer = document.createElement("div");
     drawer.id = "full-scrubber-drawer";
-    drawer.className = "sidebar-section full-scrubber-drawer";
+    drawer.className = "sidebar-section full-scrubber-drawer" + (drawerMaximized ? " maximized" : "");
 
     const content = document.createElement("div");
     content.className = "collapse show full-scrubber-content";
