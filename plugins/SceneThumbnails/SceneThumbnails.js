@@ -24,7 +24,7 @@
   "use strict";
 
   const IDRE = /^\/scenes\/(\d+)(?:\/|$)/;
-  const COL_OPTIONS = [1, 2, 3, 4, 6, 12];
+  const COL_OPTIONS = [12, 6, 4, 3, 2, 1];
   const TILE_GAP = 2;
   const COL_OPTION_COUNT = COL_OPTIONS.length;
 
