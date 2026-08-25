@@ -42,8 +42,7 @@
     return svg;
   }
 
-  const faLib =
-    (window.PluginApi && window.PluginApi.libraries && window.PluginApi.libraries.FontAwesomeSolid) || null;
+  const faLib = window.PluginApi.libraries.FontAwesomeSolid;
 
   let currentVideo = null;
   let syncTimer = null;
@@ -87,22 +86,12 @@
     return Math.max(1, (cw - TILE_GAP * (n - 1)) / n);
   }
 
-  const gqlTag =
-    (window.PluginApi && window.PluginApi.libraries && window.PluginApi.libraries.Apollo && window.PluginApi.libraries.Apollo.gql) || null;
-  const apolloClient =
-    (window.PluginApi && window.PluginApi.utils && window.PluginApi.utils.StashService && window.PluginApi.utils.StashService.getClient()) || null;
+  const gqlTag = window.PluginApi.libraries.Apollo.gql;
+  const apolloClient = window.PluginApi.utils.StashService.getClient();
 
   function graphql(query, variables) {
-    if (apolloClient && gqlTag) {
-      return apolloClient.query({ query: gqlTag(query), variables })
-        .then((r) => ({ data: r.data }));
-    }
-    return fetch("/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ query, variables }),
-    }).then((r) => r.json());
+    return apolloClient.query({ query: gqlTag(query), variables })
+      .then((r) => ({ data: r.data }));
   }
 
   function loadImage(src) {
@@ -179,8 +168,7 @@
   }
 
   function seekTo(t) {
-    const player =
-      window.PluginApi?.utils?.InteractiveUtils?.getPlayer?.() || null;
+    const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
     if (!player) return;
     const doSeek = () => {
       try { player.currentTime(t); } catch (e) { }
@@ -279,7 +267,8 @@
       const nextStart = i + 1 < cues.length ? cues[i + 1].t : c.t + (c.t - (cues[i - 1]?.t || 0)) || 0;
       const startStr = fmt(c.t);
       const endStr = fmt(nextStart);
-      const tile = document.createElement("div");
+      const tile = document.createElement("button");
+      tile.type = "button";
       tile.title = startStr + " - " + endStr;
       tile.style.cssText =
         "width:" +
@@ -290,7 +279,7 @@
         tileWidthPct +
         ";flex:0 0 0%;flex-basis:" +
         tileWidthPct +
-        ";cursor:pointer;position:relative;" +
+        ";cursor:pointer;position:relative;border:none;background:0 0;padding:0;font:inherit;" +
         "background-image:url('" +
         data.spriteUrl +
         "');" +
@@ -351,22 +340,12 @@
     btn.type = "button";
     btn.className = "minimal collapse-button";
     btn.title = "Close";
-    if (faLib && faLib.faTable) {
-      btn.appendChild(faIconNode(faLib.faTable));
-    } else {
-      const fallback = document.createElement("i");
-      fallback.className = "fas fa-table fa-fw";
-      btn.appendChild(fallback);
-    }
+    btn.appendChild(faIconNode(faLib.faTable));
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
     chevronIcon.className = "full-scrubber-chevron";
-    if (faLib && faLib.faChevronDown) {
-      chevronIcon.appendChild(faIconNode(faLib.faChevronDown));
-    } else {
-      chevronIcon.innerHTML = '<i class="fas fa-chevron-down fa-fw"></i>';
-    }
+    chevronIcon.appendChild(faIconNode(faLib.faChevronDown));
     btn.appendChild(label);
     btn.appendChild(chevronIcon);
     btn.addEventListener("click", (e) => {
@@ -399,13 +378,7 @@
     btn.className = "btn btn-secondary minimal full-scrubber-toolbar-btn";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
-    if (faLib && faLib.faTable) {
-      btn.appendChild(faIconNode(faLib.faTable));
-    } else {
-      const fallback = document.createElement("i");
-      fallback.className = "fas fa-table fa-fw";
-      btn.appendChild(fallback);
-    }
+    btn.appendChild(faIconNode(faLib.faTable));
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
@@ -470,15 +443,7 @@
     maxBtn.type = "button";
     maxBtn.className = "btn btn-secondary btn-sm full-scrubber-maximize";
     maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
-    if (faLib) {
-      const iconDef = drawerMaximized ? faLib.faCompress : faLib.faExpand;
-      if (iconDef) maxBtn.appendChild(faIconNode(iconDef));
-    }
-    if (!maxBtn.firstChild) {
-      const fallback = document.createElement("i");
-      fallback.className = "fas " + (drawerMaximized ? "fa-compress" : "fa-expand") + " fa-fw";
-      maxBtn.appendChild(fallback);
-    }
+    maxBtn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
     maxBtn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleMaximize();
@@ -507,15 +472,7 @@
       if (btn) {
         btn.title = drawerMaximized ? "Restore" : "Maximize";
         btn.innerHTML = "";
-        if (faLib) {
-          const iconDef = drawerMaximized ? faLib.faCompress : faLib.faExpand;
-          if (iconDef) btn.appendChild(faIconNode(iconDef));
-        }
-        if (!btn.firstChild) {
-          const fallback = document.createElement("i");
-          fallback.className = "fas " + (drawerMaximized ? "fa-compress" : "fa-expand") + " fa-fw";
-          btn.appendChild(fallback);
-        }
+        btn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
       }
     }
   }
@@ -691,8 +648,7 @@
     }
     const id = m[1];
 
-    const player =
-      window.PluginApi?.utils?.InteractiveUtils?.getPlayer?.() || null;
+    const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
     if (!player) return;
 
     if (scrubberFor !== id) {
