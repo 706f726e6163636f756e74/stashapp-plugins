@@ -79,7 +79,7 @@
   }
 
   function tileWidthForRow() {
-    const el = drawerTiles || document.querySelector(".full-scrubber-tiles");
+    const el = drawerTiles || document.querySelector(".scene-thumbs-tiles");
     const cw = el ? el.clientWidth : 0;
     if (!cw || !scrubberData) return 80;
     const n = tilesPerRow();
@@ -312,24 +312,24 @@
   }
 
   function ensureStyles() {
-    if (document.getElementById("full-scrubber-styles")) return;
+    if (document.getElementById("scene-thumbs-styles")) return;
     const s = document.createElement("style");
-    s.id = "full-scrubber-styles";
+    s.id = "scene-thumbs-styles";
     s.textContent =
-      ".full-scrubber-backdrop{position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;}" +
-      ".full-scrubber-backdrop.open{opacity:1;pointer-events:auto;}" +
-      ".full-scrubber-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
-      ".full-scrubber-drawer.open{transform:translateY(0);}" +
-      ".full-scrubber-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
-      ".full-scrubber-drawer.sidebar-section{border-bottom:none;}" +
-      ".full-scrubber-drawer .collapse-header{padding:0;}" +
-      ".full-scrubber-drawer .collapse,.full-scrubber-drawer .collapsing{padding-top:0;}" +
-      ".full-scrubber-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
-      ".full-scrubber-drawer .collapse-button .full-scrubber-chevron{margin-left:auto;}" +
-      ".full-scrubber-drawer .full-scrubber-sizes{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
-      ".full-scrubber-drawer .full-scrubber-size-control{display:flex;align-items:center;gap:.5rem;}" +
-      ".full-scrubber-drawer .full-scrubber-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
-      ".full-scrubber-tiles{display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;overflow-y:auto;padding:0 .5rem .5rem;}";
+      ".scene-thumbs-backdrop{position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;}" +
+      ".scene-thumbs-backdrop.open{opacity:1;pointer-events:auto;}" +
+      ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
+      ".scene-thumbs-drawer.open{transform:translateY(0);}" +
+      ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
+      ".scene-thumbs-drawer.sidebar-section{border-bottom:none;}" +
+      ".scene-thumbs-drawer .collapse-header{padding:0;}" +
+      ".scene-thumbs-drawer .collapse,.scene-thumbs-drawer .collapsing{padding-top:0;}" +
+      ".scene-thumbs-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
+      ".scene-thumbs-drawer .collapse-button .scene-thumbs-chevron{margin-left:auto;}" +
+      ".scene-thumbs-drawer .scene-thumbs-sizes{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
+      ".scene-thumbs-tiles{display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;overflow-y:auto;padding:0 .5rem .5rem;}";
     document.head.appendChild(s);
   }
 
@@ -344,7 +344,7 @@
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
-    chevronIcon.className = "full-scrubber-chevron";
+    chevronIcon.className = "scene-thumbs-chevron";
     chevronIcon.appendChild(faIconNode(faLib.faChevronDown));
     btn.appendChild(label);
     btn.appendChild(chevronIcon);
@@ -359,7 +359,7 @@
   function buildBackdrop() {
     if (backdropEl && backdropEl.isConnected) return;
     const b = document.createElement("div");
-    b.className = "full-scrubber-backdrop";
+    b.className = "scene-thumbs-backdrop";
     b.addEventListener("click", closeDrawer);
     document.body.appendChild(b);
     backdropEl = b;
@@ -375,7 +375,7 @@
     const wrap = document.createElement("span");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "btn btn-secondary minimal full-scrubber-toolbar-btn";
+    btn.className = "btn btn-secondary minimal scene-thumbs-toolbar-btn";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
     btn.appendChild(faIconNode(faLib.faTable));
@@ -394,10 +394,10 @@
 
   function buildSizes() {
     const wrap = document.createElement("div");
-    wrap.className = "full-scrubber-sizes";
+    wrap.className = "scene-thumbs-sizes";
 
     const control = document.createElement("div");
-    control.className = "full-scrubber-size-control";
+    control.className = "scene-thumbs-size-control";
     control.style.justifyContent = "flex-end";
 
     const isMobile = window.matchMedia("(max-width: 768px)").matches;
@@ -441,7 +441,7 @@
 
     const maxBtn = document.createElement("button");
     maxBtn.type = "button";
-    maxBtn.className = "btn btn-secondary btn-sm full-scrubber-maximize";
+    maxBtn.className = "btn btn-secondary btn-sm scene-thumbs-maximize";
     maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
     maxBtn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
     maxBtn.addEventListener("click", (e) => {
@@ -468,7 +468,7 @@
     } catch (e) { }
     if (drawerEl) drawerEl.classList.toggle("maximized", drawerMaximized);
     if (sizesEl) {
-      const btn = sizesEl.querySelector(".full-scrubber-maximize");
+      const btn = sizesEl.querySelector(".scene-thumbs-maximize");
       if (btn) {
         btn.title = drawerMaximized ? "Restore" : "Maximize";
         btn.innerHTML = "";
@@ -552,14 +552,14 @@
     buildBackdrop();
 
     const drawer = document.createElement("div");
-    drawer.id = "full-scrubber-drawer";
-    drawer.className = "sidebar-section full-scrubber-drawer" + (drawerMaximized ? " maximized" : "");
+    drawer.id = "scene-thumbs-drawer";
+    drawer.className = "sidebar-section scene-thumbs-drawer" + (drawerMaximized ? " maximized" : "");
 
     const content = document.createElement("div");
-    content.className = "collapse show full-scrubber-content";
+    content.className = "collapse show scene-thumbs-content";
 
     const tiles = document.createElement("div");
-    tiles.className = "full-scrubber-tiles";
+    tiles.className = "scene-thumbs-tiles";
     content.appendChild(tiles);
 
     drawer.appendChild(buildHeader());
