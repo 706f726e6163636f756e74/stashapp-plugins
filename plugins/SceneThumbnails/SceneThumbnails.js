@@ -87,7 +87,16 @@
     return Math.max(1, (cw - TILE_GAP * (n - 1)) / n);
   }
 
+  const gqlTag =
+    (window.PluginApi && window.PluginApi.libraries && window.PluginApi.libraries.Apollo && window.PluginApi.libraries.Apollo.gql) || null;
+  const apolloClient =
+    (window.PluginApi && window.PluginApi.utils && window.PluginApi.utils.StashService && window.PluginApi.utils.StashService.getClient()) || null;
+
   function graphql(query, variables) {
+    if (apolloClient && gqlTag) {
+      return apolloClient.query({ query: gqlTag(query), variables })
+        .then((r) => ({ data: r.data }));
+    }
     return fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -105,13 +114,6 @@
     });
   }
 
-  function vttSeconds(s) {
-    const parts = String(s).trim().split(":");
-    let sec = 0;
-    for (const p of parts) sec = sec * 60 + parseFloat(p || 0);
-    return Number.isNaN(sec) ? 0 : sec;
-  }
-
   function fmt(t) {
     t = Math.max(0, Math.floor(t));
     const s = t % 60;
@@ -124,24 +126,17 @@
     return fetch(vttUrl, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.text() : ""))
       .then((text) => {
+        if (!text || typeof window.WebVTT === "undefined") return null;
         const cues = [];
-        const lines = text.split(/\r?\n/);
-        for (let i = 0; i < lines.length; i++) {
-          const arrow = lines[i].indexOf("-->");
-          if (arrow < 0) continue;
-          const start = vttSeconds(lines[i].slice(0, arrow));
-          for (
-            let j = i + 1;
-            j < lines.length && lines[j].indexOf("-->") < 0;
-            j++
-          ) {
-            const m = lines[j].match(/#xywh=(\d+),(\d+),(\d+),(\d+)/);
-            if (m) {
-              cues.push({ t: start, x: +m[1], y: +m[2], w: +m[3], h: +m[4] });
-              break;
-            }
+        const parser = new window.WebVTT.Parser(window, window.WebVTT.StringDecoder());
+        parser.oncue = (cue) => {
+          const m = cue.text.match(/^([^#]*)#xywh=(\d+),(\d+),(\d+),(\d+)$/i);
+          if (m) {
+            cues.push({ t: cue.startTime, x: +m[2], y: +m[3], w: +m[4], h: +m[5] });
           }
-        }
+        };
+        parser.parse(text);
+        parser.flush();
         return cues.length ? cues : null;
       });
   }
