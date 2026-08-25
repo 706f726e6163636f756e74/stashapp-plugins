@@ -49,7 +49,6 @@
   let scrubberFor = null;
   let toolbarBtnEl = null;
   let drawerEl = null;
-  let drawerTiles = null;
   let drawerContent = null;
   let sizesEl = null;
   let backdropEl = null;
@@ -79,7 +78,7 @@
   }
 
   function tileWidthForRow() {
-    const el = drawerTiles || document.querySelector(".scene-thumbs-tiles");
+    const el = drawerContent || document.querySelector(".scene-thumbs-content");
     const cw = el ? el.clientWidth : 0;
     if (!cw || !scrubberData) return 80;
     const n = tilesPerRow();
@@ -119,9 +118,9 @@
         const cues = [];
         const parser = new window.WebVTT.Parser(window, window.WebVTT.StringDecoder());
         parser.oncue = (cue) => {
-          const m = cue.text.match(/^([^#]*)#xywh=(\d+),(\d+),(\d+),(\d+)$/i);
+          const m = cue.text.match(/#xywh=(\d+),(\d+),(\d+),(\d+)/i);
           if (m) {
-            cues.push({ t: cue.startTime, x: +m[2], y: +m[3], w: +m[4], h: +m[5] });
+            cues.push({ t: cue.startTime, x: +m[1], y: +m[2], w: +m[3], h: +m[4] });
           }
         };
         parser.parse(text);
@@ -211,7 +210,11 @@
 
   function syncTime() {
     try {
-      lastVideoTime = (currentVideo && currentVideo.currentTime) || 0;
+      const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
+      const t = player
+        ? player.currentTime()
+        : currentVideo && currentVideo.currentTime;
+      lastVideoTime = t || 0;
     } catch (err) {
       lastVideoTime = 0;
     }
@@ -322,13 +325,12 @@
       ".scene-thumbs-drawer.open{transform:translateY(0);}" +
       ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
       ".scene-thumbs-drawer.scene-thumbs-section{border-bottom:none;}" +
-      ".scene-thumbs-drawer .scene-thumbs-header{padding:0;width:100%;}" +
-      ".scene-thumbs-drawer .scene-thumbs-header-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-header{padding:0;display:flex;align-items:stretch;}" +
+      ".scene-thumbs-drawer .scene-thumbs-header-btn{display:flex;flex:1;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
       ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
-      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
-      ".scene-thumbs-tiles{display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;overflow-y:auto;padding:0 .5rem .5rem;}";
+      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
     document.head.appendChild(s);
   }
 
@@ -493,10 +495,10 @@
   }
 
   function renderTiles() {
-    if (!drawerTiles || !scrubberData) return;
+    if (!drawerContent || !scrubberData) return;
     tileSets = [];
-    drawerTiles.innerHTML = "";
-    buildTiles(drawerTiles, scrubberData);
+    drawerContent.innerHTML = "";
+    buildTiles(drawerContent, scrubberData);
   }
 
   function scrollToHighlight() {
@@ -521,7 +523,7 @@
     if (drawerEl) drawerEl.classList.add("open");
     if (backdropEl) backdropEl.classList.add("open");
     updateToggle();
-    updateHighlight(lastVideoTime);
+    syncTime();
     renderTiles();
     scrollToHighlight();
   }
@@ -557,10 +559,6 @@
     const content = document.createElement("div");
     content.className = "scene-thumbs-content";
 
-    const tiles = document.createElement("div");
-    tiles.className = "scene-thumbs-tiles";
-    content.appendChild(tiles);
-
     drawer.appendChild(buildHeader());
     sizesEl = buildSizes();
     drawer.appendChild(sizesEl);
@@ -568,9 +566,8 @@
     document.body.appendChild(drawer);
 
     drawerEl = drawer;
-    drawerTiles = tiles;
     drawerContent = content;
-    buildTiles(tiles, data);
+    buildTiles(content, data);
   }
 
   function teardown() {
@@ -592,7 +589,6 @@
       } catch (e) { }
     }
     drawerEl = null;
-    drawerTiles = null;
     drawerContent = null;
     sizesEl = null;
     drawerOpen = false;
