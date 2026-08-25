@@ -292,7 +292,7 @@
         -Math.round(c.y * scale) +
         "px;";
       const timeEl = document.createElement("div");
-      timeEl.className = "scrubber-item-time";
+      timeEl.className = "scene-thumbs-item-time";
       timeEl.textContent = startStr + " - " + endStr;
       timeEl.style.cssText =
         "color:white;font-size:10px;position:absolute;bottom:0;left:0;right:0;" +
@@ -321,11 +321,10 @@
       ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
       ".scene-thumbs-drawer.open{transform:translateY(0);}" +
       ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
-      ".scene-thumbs-drawer.sidebar-section{border-bottom:none;}" +
-      ".scene-thumbs-drawer .collapse-header{padding:0;}" +
-      ".scene-thumbs-drawer .collapse,.scene-thumbs-drawer .collapsing{padding-top:0;}" +
-      ".scene-thumbs-drawer .collapse-button{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
-      ".scene-thumbs-drawer .collapse-button .scene-thumbs-chevron{margin-left:auto;}" +
+      ".scene-thumbs-drawer.scene-thumbs-section{border-bottom:none;}" +
+      ".scene-thumbs-drawer .scene-thumbs-header{padding:0;}" +
+      ".scene-thumbs-drawer .scene-thumbs-header-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
       ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:.5rem;padding-bottom:5rem;}" +
@@ -335,10 +334,10 @@
 
   function buildHeader() {
     const head = document.createElement("div");
-    head.className = "collapse-header";
+    head.className = "scene-thumbs-header";
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "minimal collapse-button";
+    btn.className = "minimal scene-thumbs-header-btn";
     btn.title = "Close";
     btn.appendChild(faIconNode(faLib.faTable));
     const label = document.createElement("span");
@@ -375,7 +374,7 @@
     const wrap = document.createElement("span");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "btn btn-secondary minimal scene-thumbs-toolbar-btn";
+    btn.className = "btn btn-secondary minimal scene-thumbs-toggle";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
     btn.appendChild(faIconNode(faLib.faTable));
@@ -553,10 +552,10 @@
 
     const drawer = document.createElement("div");
     drawer.id = "scene-thumbs-drawer";
-    drawer.className = "sidebar-section scene-thumbs-drawer" + (drawerMaximized ? " maximized" : "");
+    drawer.className = "scene-thumbs-section scene-thumbs-drawer" + (drawerMaximized ? " maximized" : "");
 
     const content = document.createElement("div");
-    content.className = "collapse show scene-thumbs-content";
+    content.className = "scene-thumbs-content";
 
     const tiles = document.createElement("div");
     tiles.className = "scene-thumbs-tiles";
