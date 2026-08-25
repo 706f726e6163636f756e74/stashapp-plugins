@@ -179,24 +179,18 @@
   }
 
   function seekTo(t) {
-    const playerEl = document.querySelector(".video-js");
-    const video =
-      (playerEl &&
-        (playerEl.querySelector("video") || playerEl.querySelector(".vjs-tech"))) ||
-      document.querySelector(".vjs-tech") ||
-      document.querySelector("video");
-    if (!video) return;
+    const player =
+      window.PluginApi?.utils?.InteractiveUtils?.getPlayer?.() || null;
+    if (!player) return;
     const doSeek = () => {
-      try {
-        video.currentTime = t;
-      } catch (e) { }
-      video.play().catch(() => { });
+      try { player.currentTime(t); } catch (e) { }
+      player.play().catch(() => { });
     };
-    if (video.readyState >= 1) {
+    if (player.readyState() >= 1) {
       doSeek();
     } else {
-      video.addEventListener("loadedmetadata", doSeek, { once: true });
-      video.play().catch(() => { });
+      player.one("loadedmetadata", doSeek);
+      player.play().catch(() => { });
     }
   }
 
@@ -697,15 +691,16 @@
     }
     const id = m[1];
 
-    const playerEl = document.querySelector(".video-js");
-    if (!playerEl) return;
+    const player =
+      window.PluginApi?.utils?.InteractiveUtils?.getPlayer?.() || null;
+    if (!player) return;
 
     if (scrubberFor !== id) {
       teardown();
       scrubberFor = id;
     }
 
-    const video = playerEl.querySelector("video") || playerEl.querySelector(".vjs-tech");
+    const video = player.el().querySelector("video") || player.el();
     attachListeners(video);
 
     getData(id).then((data) => {
