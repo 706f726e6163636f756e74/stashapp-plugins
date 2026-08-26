@@ -341,7 +341,7 @@
     btn.type = "button";
     btn.className = "minimal scene-thumbs-header-btn";
     btn.title = "Close";
-    btn.appendChild(faIconNode(faLib.faTable));
+    btn.appendChild(faIconNode(faLib.faPanorama));
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
@@ -379,7 +379,7 @@
     btn.className = "btn btn-secondary minimal scene-thumbs-toggle";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
-    btn.appendChild(faIconNode(faLib.faTable));
+    btn.appendChild(faIconNode(faLib.faPanorama));
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
