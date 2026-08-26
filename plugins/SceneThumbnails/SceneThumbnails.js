@@ -28,6 +28,10 @@
   const TILE_GAP = 2;
   const COL_OPTION_COUNT = COL_OPTIONS.length;
 
+  function isMobile() {
+    return window.matchMedia("(max-width: 768px)").matches;
+  }
+
   function faIconNode(iconDef) {
     const [width, height, , , pathData] = iconDef.icon;
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -413,17 +417,9 @@
     updateToggle();
   }
 
-  function buildSizes() {
-    const wrap = document.createElement("div");
-    wrap.className = "scene-thumbs-toolbar";
-
-    const control = document.createElement("div");
-    control.className = "scene-thumbs-size-control";
-    control.style.justifyContent = "flex-end";
-
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  function buildSizeInput() {
     let input;
-    if (isMobile) {
+    if (isMobile()) {
       input = document.createElement("select");
       input.className = "btn-secondary form-control";
       input.style.width = "120px";
@@ -436,11 +432,10 @@
       });
       updateSizeSelect(input);
       input.addEventListener("change", () => {
-        const v = parseInt(input.value, 10);
-        const n = isNaN(v) ? 2 : Math.max(0, Math.min(COL_OPTION_COUNT - 1, v));
-        setColsPerRow(n);
+        const rawIndex = parseInt(input.value, 10);
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTION_COUNT - 1, rawIndex));
+        setColsPerRow(index);
       });
-      control.appendChild(input);
     } else {
       input = document.createElement("input");
       input.type = "range";
@@ -451,12 +446,22 @@
       input.setAttribute("aria-label", "Thumbnails per row");
       updateSizeInput(input);
       input.addEventListener("input", () => {
-        const v = parseInt(input.value, 10);
-        const n = isNaN(v) ? 2 : Math.max(0, Math.min(COL_OPTION_COUNT - 1, v));
-        setColsPerRow(n);
+        const rawIndex = parseInt(input.value, 10);
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTION_COUNT - 1, rawIndex));
+        setColsPerRow(index);
       });
-      control.appendChild(input);
     }
+    return input;
+  }
+
+  function buildSizes() {
+    const wrap = document.createElement("div");
+    wrap.className = "scene-thumbs-toolbar";
+
+    const control = document.createElement("div");
+    control.className = "scene-thumbs-size-control";
+    control.style.justifyContent = "flex-end";
+    control.appendChild(buildSizeInput());
 
     wrap.appendChild(control);
 
@@ -511,6 +516,31 @@
     tileSets = [];
     drawerContent.innerHTML = "";
     buildTiles(drawerContent, scrubberData, scrubberFor);
+  }
+
+  function resizeTiles() {
+    if (!scrubberData || !tileSets.length) return;
+    const cues = scrubberData.cues;
+    const n = tilesPerRow();
+    const sizeW = tileWidthForRow();
+    const scale = sizeW / cues[0].w;
+    const tileH = Math.max(1, Math.round(cues[0].h * scale));
+    const bgSize =
+      Math.round(scrubberData.spriteW * scale) + "px " + Math.round(scrubberData.spriteH * scale) + "px";
+    const tileWidthPct = "calc((100% - " + TILE_GAP + "px * " + (n - 1) + ") / " + n + ")";
+    for (const set of tileSets) {
+      for (let i = 0; i < set.tiles.length; i++) {
+        const tile = set.tiles[i];
+        const c = cues[i];
+        tile.style.width = tileWidthPct;
+        tile.style.height = tileH + "px";
+        tile.style.maxWidth = tileWidthPct;
+        tile.style.flexBasis = tileWidthPct;
+        tile.style.backgroundSize = bgSize;
+        tile.style.backgroundPosition =
+          -Math.round(c.x * scale) + "px " + -Math.round(c.y * scale) + "px";
+      }
+    }
   }
 
   function scrollToHighlight() {
@@ -599,7 +629,6 @@
     getData(id).then((d) => {
       if (loading.isConnected) loading.remove();
       if (!d) return;
-      scrubberData = d;
       tileSets = [];
       buildTiles(content, d, id);
       scrollToHighlight();
@@ -654,18 +683,19 @@
     if (e.key === "Escape" && drawerOpen) closeDrawer();
   });
 
-  let lastIsMobile = window.matchMedia("(max-width: 768px)").matches;
+  let lastIsMobile = isMobile();
 
   function onResize() {
     if (drawerOpen) {
-      renderTiles();
-      const isMobile = window.matchMedia("(max-width: 768px)").matches;
-      if (isMobile !== lastIsMobile) {
-        lastIsMobile = isMobile;
-        if (sizesEl && sizesEl.parentNode) {
-          const newControl = buildSizes();
-          sizesEl.replaceWith(newControl);
-          sizesEl = newControl;
+      resizeTiles();
+      const mobile = isMobile();
+      if (mobile !== lastIsMobile) {
+        lastIsMobile = mobile;
+        const oldControl = sizesEl && sizesEl.querySelector(".scene-thumbs-size-control");
+        if (oldControl) {
+          const newInput = buildSizeInput();
+          oldControl.textContent = "";
+          oldControl.appendChild(newInput);
         }
       }
     }
@@ -685,7 +715,7 @@
         scrubberFor = id;
       }
 
-      const video = player.el().querySelector("video") || player.el();
+      const video = player.el().querySelector("video") ?? null;
       attachListeners(video);
 
       getData(id).then((data) => {
@@ -731,8 +761,11 @@
               lastVideoTime = scene.resume_time;
             }
             buildDrawer(id);
-            if (drawerEl) drawerEl.offsetHeight;
-            openDrawer();
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                openDrawer();
+              });
+            });
           });
       });
       wrap.appendChild(btn);
