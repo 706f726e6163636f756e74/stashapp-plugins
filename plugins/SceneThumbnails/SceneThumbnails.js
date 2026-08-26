@@ -696,7 +696,7 @@
       return;
     }
 
-    if (/^\/scenes\/?$/.test(location.pathname)) {
+    if (/^\/scenes\/?$/.test(location.pathname) || /^\/performers\/\d+\/scenes\/?$/.test(location.pathname) || /^\/studios\/\d+\/scenes\/?$/.test(location.pathname) || /^\/tags\/\d+\/scenes\/?$/.test(location.pathname)) {
       initScenesList();
       return;
     }
