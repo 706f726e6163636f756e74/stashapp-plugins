@@ -26,11 +26,12 @@
   const IDRE = /^\/scenes\/(\d+)(?:\/|$)/;
   const COL_OPTIONS = [12, 6, 4, 3, 2, 1];
   const TILE_GAP = 2;
-  const COL_OPTION_COUNT = COL_OPTIONS.length;
 
   function isMobile() {
     return window.matchMedia("(max-width: 768px)").matches;
   }
+
+  const VIDEO_EVENTS = ["timeupdate", "seeked", "loadedmetadata", "durationchange", "play"];
 
   function faIconNode(iconDef) {
     const [width, height, , , pathData] = iconDef.icon;
@@ -50,7 +51,7 @@
 
   let currentVideo = null;
   let syncTimer = null;
-  let scrubberFor = null;
+  let currentSceneId = null;
   let toolbarBtnEl = null;
   let drawerEl = null;
   let drawerContent = null;
@@ -58,10 +59,10 @@
   let backdropEl = null;
   let drawerOpen = false;
   let drawerMaximized = false;
-  let scrubberData = null;
+  let sceneData = null;
   let tileSets = [];
   let lastVideoTime = 0;
-  let dataCache = null;
+  let dataCache = new Map();
   let drawerSceneId = null;
   let colIndex = 4;
 
@@ -85,7 +86,7 @@
   function tileWidthForRow() {
     const el = drawerContent || document.querySelector(".scene-thumbs-content");
     const cw = el ? el.clientWidth : 0;
-    if (!cw || !scrubberData) return 80;
+    if (!cw || !sceneData) return 80;
     const n = tilesPerRow();
     return Math.max(1, (cw - TILE_GAP * (n - 1)) / n);
   }
@@ -152,7 +153,6 @@
             cues
               ? {
                 cues,
-                img,
                 spriteUrl: paths.sprite,
                 spriteW: img.naturalWidth,
                 spriteH: img.naturalHeight,
@@ -164,9 +164,9 @@
   }
 
   function getData(id) {
-    if (dataCache && dataCache.id === id) return Promise.resolve(dataCache.data);
+    if (dataCache.has(id)) return Promise.resolve(dataCache.get(id));
     return loadSceneData(id).then((data) => {
-      dataCache = { id, data };
+      dataCache.set(id, data);
       return data;
     });
   }
@@ -187,8 +187,8 @@
   }
 
   function highlightSet(set, t) {
-    if (!scrubberData || !set.tiles.length) return;
-    const cues = scrubberData.cues;
+    if (!sceneData || !set.tiles.length) return;
+    const cues = sceneData.cues;
     let idx = 0;
     for (let i = 0; i < cues.length; i++) {
       if (cues[i].t <= t) idx = i;
@@ -209,7 +209,7 @@
   }
 
   function updateHighlight(t) {
-    if (!scrubberData) return;
+    if (!sceneData) return;
     for (const set of tileSets) highlightSet(set, t);
   }
 
@@ -224,31 +224,19 @@
     updateHighlight(lastVideoTime);
   }
 
-  function onTime() {
-    syncTime();
-  }
-
   function attachListeners(video) {
     if (video === currentVideo) {
       syncTime();
       return;
     }
     if (currentVideo) {
-      currentVideo.removeEventListener("timeupdate", onTime);
-      currentVideo.removeEventListener("seeked", onTime);
-      currentVideo.removeEventListener("loadedmetadata", onTime);
-      currentVideo.removeEventListener("durationchange", onTime);
-      currentVideo.removeEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.removeEventListener(evt, syncTime);
     }
     currentVideo = video || null;
     if (syncTimer) clearInterval(syncTimer);
     syncTimer = null;
     if (currentVideo) {
-      currentVideo.addEventListener("timeupdate", onTime);
-      currentVideo.addEventListener("seeked", onTime);
-      currentVideo.addEventListener("loadedmetadata", onTime);
-      currentVideo.addEventListener("durationchange", onTime);
-      currentVideo.addEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.addEventListener(evt, syncTime);
       syncTimer = setInterval(syncTime, 500);
     }
     syncTime();
@@ -257,7 +245,7 @@
   function buildTiles(cont, data, sceneId) {
     const set = { tiles: [], highlighted: null };
     tileSets.push(set);
-    scrubberData = data;
+    sceneData = data;
 
     const cues = data.cues;
     const n = tilesPerRow();
@@ -332,7 +320,6 @@
       ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease,height .25s ease,max-height .25s ease,border-radius .25s ease;}" +
       ".scene-thumbs-drawer.open{transform:translateY(0);}" +
       ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
-      ".scene-thumbs-drawer.scene-thumbs-section{border-bottom:none;}" +
       ".scene-thumbs-drawer .scene-thumbs-header{padding:0;display:flex;align-items:stretch;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn{display:flex;flex:1;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
@@ -433,21 +420,21 @@
       updateSizeSelect(input);
       input.addEventListener("change", () => {
         const rawIndex = parseInt(input.value, 10);
-        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTION_COUNT - 1, rawIndex));
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTIONS.length - 1, rawIndex));
         setColsPerRow(index);
       });
     } else {
       input = document.createElement("input");
       input.type = "range";
       input.min = "0";
-      input.max = String(COL_OPTION_COUNT - 1);
+      input.max = String(COL_OPTIONS.length - 1);
       input.step = "1";
       input.className = "zoom-slider";
       input.setAttribute("aria-label", "Thumbnails per row");
       updateSizeInput(input);
       input.addEventListener("input", () => {
         const rawIndex = parseInt(input.value, 10);
-        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTION_COUNT - 1, rawIndex));
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTIONS.length - 1, rawIndex));
         setColsPerRow(index);
       });
     }
@@ -512,21 +499,21 @@
   }
 
   function renderTiles() {
-    if (!drawerContent || !scrubberData) return;
+    if (!drawerContent || !sceneData) return;
     tileSets = [];
     drawerContent.innerHTML = "";
-    buildTiles(drawerContent, scrubberData, scrubberFor);
+    buildTiles(drawerContent, sceneData, currentSceneId);
   }
 
   function resizeTiles() {
-    if (!scrubberData || !tileSets.length) return;
-    const cues = scrubberData.cues;
+    if (!sceneData || !tileSets.length) return;
+    const cues = sceneData.cues;
     const n = tilesPerRow();
     const sizeW = tileWidthForRow();
     const scale = sizeW / cues[0].w;
     const tileH = Math.max(1, Math.round(cues[0].h * scale));
     const bgSize =
-      Math.round(scrubberData.spriteW * scale) + "px " + Math.round(scrubberData.spriteH * scale) + "px";
+      Math.round(sceneData.spriteW * scale) + "px " + Math.round(sceneData.spriteH * scale) + "px";
     const tileWidthPct = "calc((100% - " + TILE_GAP + "px * " + (n - 1) + ") / " + n + ")";
     for (const set of tileSets) {
       for (let i = 0; i < set.tiles.length; i++) {
@@ -556,7 +543,8 @@
     if (!tile) return;
     const cr = scroller.getBoundingClientRect();
     const tr = tile.getBoundingClientRect();
-    scroller.scrollTop += tr.top - cr.top - (cr.height - tr.height) / 2;
+    const headerH = drawerEl ? drawerEl.querySelector(".scene-thumbs-header")?.offsetHeight || 0 : 0;
+    scroller.scrollTop += tr.top - cr.top - headerH - (cr.height - tr.height) / 2;
     scroller.scrollLeft += tr.left - cr.left - (cr.width - tr.width) / 2;
   }
 
@@ -595,7 +583,7 @@
     if (drawerEl && drawerEl.isConnected && drawerSceneId === id) return;
     if (drawerEl) { drawerEl.remove(); drawerEl = null; }
     drawerSceneId = id;
-    scrubberData = null;
+    sceneData = null;
     tileSets = [];
     ensureStyles();
     buildBackdrop();
@@ -670,11 +658,7 @@
       syncTimer = null;
     }
     if (currentVideo) {
-      currentVideo.removeEventListener("timeupdate", onTime);
-      currentVideo.removeEventListener("seeked", onTime);
-      currentVideo.removeEventListener("loadedmetadata", onTime);
-      currentVideo.removeEventListener("durationchange", onTime);
-      currentVideo.removeEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.removeEventListener(evt, syncTime);
       currentVideo = null;
     }
   }
@@ -710,9 +694,9 @@
       const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
       if (!player) return;
 
-      if (scrubberFor !== id) {
+      if (currentSceneId !== id) {
         teardown();
-        scrubberFor = id;
+        currentSceneId = id;
       }
 
       const video = player.el().querySelector("video") ?? null;
@@ -726,7 +710,7 @@
       return;
     }
 
-    if (/^\/scenes\/?$/.test(location.pathname) || /^\/performers\/\d+\/scenes\/?$/.test(location.pathname) || /^\/studios\/\d+\/scenes\/?$/.test(location.pathname) || /^\/tags\/\d+\/scenes\/?$/.test(location.pathname)) {
+    if (/^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
       initScenesList();
       return;
     }
@@ -747,7 +731,6 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "minimal btn btn-secondary";
-      btn.setAttribute("data-scene-thumbs", "");
       btn.title = "Scene Thumbnails";
       btn.appendChild(faIconNode(faLib.faGrip));
       btn.addEventListener("click", (e) => {
@@ -773,7 +756,6 @@
       if (popovers) popovers.appendChild(wrap);
     });
   }
-
 
   let timer = null;
   function schedule() {
