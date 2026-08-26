@@ -334,7 +334,7 @@
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
       ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;}" +
-      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
+      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
     document.head.appendChild(s);
   }
 
