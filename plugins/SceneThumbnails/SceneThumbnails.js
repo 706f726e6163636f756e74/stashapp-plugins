@@ -345,7 +345,7 @@
     btn.type = "button";
     btn.className = "minimal scene-thumbs-header-btn";
     btn.title = "Close";
-    btn.appendChild(faIconNode(faLib.faPanorama));
+    btn.appendChild(faIconNode(faLib.faGrip));
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
@@ -366,7 +366,7 @@
     maxBtn.style.flex = "0";
     const maxChevron = document.createElement("span");
     maxChevron.className = "scene-thumbs-chevron";
-    maxChevron.appendChild(faIconNode(drawerMaximized ? faLib.faDownLeftAndUpRightToCenter : faLib.faUpRightAndDownLeftFromCenter));
+    maxChevron.appendChild(faIconNode(drawerMaximized ? faLib.faArrowsDownToLine : faLib.faArrowsUpToLine));
     maxBtn.appendChild(maxChevron);
     maxBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -399,7 +399,7 @@
     btn.className = "btn btn-secondary minimal scene-thumbs-toggle";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
-    btn.appendChild(faIconNode(faLib.faPanorama));
+    btn.appendChild(faIconNode(faLib.faGrip));
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
@@ -474,7 +474,7 @@
   function toggleMaximize() {
     drawerMaximized = !drawerMaximized;
     try {
-      localStorage.setItem("sceneThumbs.maximized", drawerMaximized ? "1" : "0");
+      localStorage.setItem("sceneThumbnails.maximized", drawerMaximized ? "1" : "0");
     } catch (e) { }
     if (drawerEl) {
       drawerEl.classList.toggle("maximized", drawerMaximized);
@@ -484,7 +484,7 @@
         const chevron = btn.querySelector(".scene-thumbs-chevron");
         if (chevron) {
           chevron.innerHTML = "";
-          chevron.appendChild(faIconNode(drawerMaximized ? faLib.faDownLeftAndUpRightToCenter : faLib.faUpRightAndDownLeftFromCenter));
+          chevron.appendChild(faIconNode(drawerMaximized ? faLib.faArrowsDownToLine : faLib.faArrowsUpToLine));
         }
       }
     }
@@ -716,7 +716,7 @@
       btn.className = "minimal btn btn-secondary";
       btn.setAttribute("data-scene-thumbs", "");
       btn.title = "Scene Thumbnails";
-      btn.appendChild(faIconNode(faLib.faPanorama));
+      btn.appendChild(faIconNode(faLib.faGrip));
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
