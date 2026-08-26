@@ -332,7 +332,7 @@
       ".scene-thumbs-drawer .scene-thumbs-header{padding:0;display:flex;align-items:stretch;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn{display:flex;flex:1;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
-      ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:flex-end;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;}" +
       ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
     document.head.appendChild(s);
@@ -532,6 +532,7 @@
 
   function openDrawer() {
     drawerOpen = true;
+    document.body.style.overflow = "hidden";
     if (drawerEl) drawerEl.classList.add("open");
     if (backdropEl) backdropEl.classList.add("open");
     updateToggle();
@@ -542,6 +543,7 @@
 
   function closeDrawer() {
     drawerOpen = false;
+    document.body.style.overflow = "";
     if (drawerEl) drawerEl.classList.remove("open");
     if (backdropEl) backdropEl.classList.remove("open");
     updateToggle();
@@ -605,6 +607,7 @@
   }
 
   function teardown() {
+    document.body.style.overflow = "";
     if (toolbarBtnEl) {
       const toolbarWrap = toolbarBtnEl.parentNode;
       try {
