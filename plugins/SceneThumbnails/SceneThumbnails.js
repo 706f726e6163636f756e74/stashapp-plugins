@@ -502,7 +502,7 @@
     if (!drawerContent || !sceneData) return;
     tileSets = [];
     drawerContent.innerHTML = "";
-    buildTiles(drawerContent, sceneData, currentSceneId);
+    buildTiles(drawerContent, sceneData, drawerSceneId);
   }
 
   function resizeTiles() {
@@ -617,6 +617,7 @@
     getData(id).then((d) => {
       if (loading.isConnected) loading.remove();
       if (!d) return;
+      if (drawerSceneId !== id) return;
       tileSets = [];
       buildTiles(content, d, id);
       scrollToHighlight();
