@@ -325,7 +325,7 @@
     s.textContent =
       ".scene-thumbs-backdrop{position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;}" +
       ".scene-thumbs-backdrop.open{opacity:1;pointer-events:auto;}" +
-      ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
+      ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease,height .25s ease,max-height .25s ease,border-radius .25s ease;}" +
       ".scene-thumbs-drawer.open{transform:translateY(0);}" +
       ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
       ".scene-thumbs-drawer.scene-thumbs-section{border-bottom:none;}" +
@@ -333,7 +333,7 @@
       ".scene-thumbs-drawer .scene-thumbs-header-btn{display:flex;flex:1;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
       ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
-      ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;}" +
       ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
     document.head.appendChild(s);
   }
@@ -358,6 +358,22 @@
       closeDrawer();
     });
     head.appendChild(btn);
+
+    const maxBtn = document.createElement("button");
+    maxBtn.type = "button";
+    maxBtn.className = "minimal scene-thumbs-header-btn scene-thumbs-maximize";
+    maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
+    maxBtn.style.flex = "0";
+    const maxChevron = document.createElement("span");
+    maxChevron.className = "scene-thumbs-chevron";
+    maxChevron.appendChild(faIconNode(drawerMaximized ? faLib.faDownLeftAndUpRightToCenter : faLib.faUpRightAndDownLeftFromCenter));
+    maxBtn.appendChild(maxChevron);
+    maxBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleMaximize();
+    });
+    head.appendChild(maxBtn);
+
     return head;
   }
 
@@ -444,17 +460,6 @@
 
     wrap.appendChild(control);
 
-    const maxBtn = document.createElement("button");
-    maxBtn.type = "button";
-    maxBtn.className = "btn btn-secondary btn-sm scene-thumbs-maximize";
-    maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
-    maxBtn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
-    maxBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      toggleMaximize();
-    });
-    wrap.appendChild(maxBtn);
-
     return wrap;
   }
 
@@ -469,15 +474,18 @@
   function toggleMaximize() {
     drawerMaximized = !drawerMaximized;
     try {
-      localStorage.setItem("sceneThumbnails.maximized", drawerMaximized ? "1" : "0");
+      localStorage.setItem("sceneThumbs.maximized", drawerMaximized ? "1" : "0");
     } catch (e) { }
-    if (drawerEl) drawerEl.classList.toggle("maximized", drawerMaximized);
-    if (sizesEl) {
-      const btn = sizesEl.querySelector(".scene-thumbs-maximize");
+    if (drawerEl) {
+      drawerEl.classList.toggle("maximized", drawerMaximized);
+      const btn = drawerEl.querySelector(".scene-thumbs-maximize");
       if (btn) {
         btn.title = drawerMaximized ? "Restore" : "Maximize";
-        btn.innerHTML = "";
-        btn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
+        const chevron = btn.querySelector(".scene-thumbs-chevron");
+        if (chevron) {
+          chevron.innerHTML = "";
+          chevron.appendChild(faIconNode(drawerMaximized ? faLib.faDownLeftAndUpRightToCenter : faLib.faUpRightAndDownLeftFromCenter));
+        }
       }
     }
   }
@@ -720,6 +728,7 @@
               lastVideoTime = scene.resume_time;
             }
             buildDrawer(id);
+            if (drawerEl) drawerEl.offsetHeight;
             openDrawer();
           });
       });
