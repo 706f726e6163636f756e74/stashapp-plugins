@@ -58,6 +58,7 @@
   let tileSets = [];
   let lastVideoTime = 0;
   let dataCache = null;
+  let drawerSceneId = null;
   let colIndex = 4;
 
   try {
@@ -214,10 +215,8 @@
       const t = player
         ? player.currentTime()
         : currentVideo && currentVideo.currentTime;
-      lastVideoTime = t || 0;
-    } catch (err) {
-      lastVideoTime = 0;
-    }
+      if (t) lastVideoTime = t;
+    } catch (err) { }
     updateHighlight(lastVideoTime);
   }
 
@@ -251,7 +250,7 @@
     syncTime();
   }
 
-  function buildTiles(cont, data) {
+  function buildTiles(cont, data, sceneId) {
     const set = { tiles: [], highlighted: null };
     tileSets.push(set);
     scrubberData = data;
@@ -303,9 +302,14 @@
       tile.appendChild(timeEl);
       tile.addEventListener("click", (function (t) {
         return function () {
-          seekTo(t);
-          closeDrawer();
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
+          if (player) {
+            seekTo(t);
+            closeDrawer();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          } else if (sceneId) {
+            window.location.assign("/scenes/" + sceneId + "?t=" + Math.round(t));
+          }
         };
       })(c.t));
       cont.appendChild(tile);
@@ -498,7 +502,7 @@
     if (!drawerContent || !scrubberData) return;
     tileSets = [];
     drawerContent.innerHTML = "";
-    buildTiles(drawerContent, scrubberData);
+    buildTiles(drawerContent, scrubberData, scrubberFor);
   }
 
   function scrollToHighlight() {
@@ -548,7 +552,11 @@
   }
 
   function buildDrawer(id, data) {
-    if (drawerEl && drawerEl.isConnected) return;
+    if (drawerEl && drawerEl.isConnected && drawerSceneId === id) return;
+    if (drawerEl) { drawerEl.remove(); drawerEl = null; }
+    drawerSceneId = id;
+    scrubberData = null;
+    tileSets = [];
     ensureStyles();
     buildBackdrop();
 
@@ -567,7 +575,25 @@
 
     drawerEl = drawer;
     drawerContent = content;
-    buildTiles(content, data);
+
+    if (data) {
+      buildTiles(content, data, id);
+      return;
+    }
+
+    const loading = document.createElement("div");
+    loading.style.cssText = "padding:2rem;text-align:center;color:#999;";
+    loading.textContent = "Loading thumbnails...";
+    content.appendChild(loading);
+
+    getData(id).then((d) => {
+      if (loading.isConnected) loading.remove();
+      if (!d) return;
+      scrubberData = d;
+      tileSets = [];
+      buildTiles(content, d, id);
+      scrollToHighlight();
+    });
   }
 
   function teardown() {
@@ -637,29 +663,72 @@
 
   function init() {
     const m = location.pathname.match(IDRE);
-    if (!m) {
-      teardown();
+    if (m) {
+      const id = m[1];
+
+      const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
+      if (!player) return;
+
+      if (scrubberFor !== id) {
+        teardown();
+        scrubberFor = id;
+      }
+
+      const video = player.el().querySelector("video") || player.el();
+      attachListeners(video);
+
+      getData(id).then((data) => {
+        if (!data) return;
+        buildToolbarButton();
+        buildDrawer(id, data);
+      });
       return;
     }
-    const id = m[1];
 
-    const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
-    if (!player) return;
-
-    if (scrubberFor !== id) {
-      teardown();
-      scrubberFor = id;
+    if (/^\/scenes\/?$/.test(location.pathname)) {
+      initScenesList();
+      return;
     }
 
-    const video = player.el().querySelector("video") || player.el();
-    attachListeners(video);
+    teardown();
+  }
 
-    getData(id).then((data) => {
-      if (!data) return;
-      buildToolbarButton();
-      buildDrawer(id, data);
+  function initScenesList() {
+    document.querySelectorAll(".scene-card").forEach((card) => {
+      if (card.querySelector(".scene-thumbs-popover")) return;
+      const link = card.querySelector('a[href^="/scenes/"]');
+      if (!link) return;
+      const m = link.getAttribute("href").match(/\/scenes\/(\d+)/);
+      if (!m) return;
+      const id = m[1];
+      const wrap = document.createElement("div");
+      wrap.className = "scene-thumbs-popover";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "minimal btn btn-secondary";
+      btn.setAttribute("data-scene-thumbs", "");
+      btn.title = "Scene Thumbnails";
+      btn.appendChild(faIconNode(faLib.faPanorama));
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        lastVideoTime = 0;
+        graphql("query($id: ID!){ findScene(id: $id) { resume_time files { duration } } }", { id })
+          .then((r) => {
+            const scene = r.data && r.data.findScene;
+            if (scene && scene.resume_time > 0 && scene.files && scene.files[0]) {
+              lastVideoTime = scene.resume_time;
+            }
+            buildDrawer(id);
+            openDrawer();
+          });
+      });
+      wrap.appendChild(btn);
+      const popovers = card.querySelector(".card-popovers");
+      if (popovers) popovers.appendChild(wrap);
     });
   }
+
 
   let timer = null;
   function schedule() {
