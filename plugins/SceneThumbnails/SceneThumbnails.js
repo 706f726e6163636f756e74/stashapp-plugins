@@ -710,7 +710,7 @@
       return;
     }
 
-    if (/^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
+    if (location.pathname === "/" || /^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
       initScenesList();
       return;
     }
