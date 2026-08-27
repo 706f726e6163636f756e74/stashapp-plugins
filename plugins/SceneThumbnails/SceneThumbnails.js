@@ -26,7 +26,12 @@
   const IDRE = /^\/scenes\/(\d+)(?:\/|$)/;
   const COL_OPTIONS = [12, 6, 4, 3, 2, 1];
   const TILE_GAP = 2;
-  const COL_OPTION_COUNT = COL_OPTIONS.length;
+
+  function isMobile() {
+    return window.matchMedia("(max-width: 768px)").matches;
+  }
+
+  const VIDEO_EVENTS = ["timeupdate", "seeked", "loadedmetadata", "durationchange", "play"];
 
   function faIconNode(iconDef) {
     const [width, height, , , pathData] = iconDef.icon;
@@ -46,7 +51,7 @@
 
   let currentVideo = null;
   let syncTimer = null;
-  let scrubberFor = null;
+  let currentSceneId = null;
   let toolbarBtnEl = null;
   let drawerEl = null;
   let drawerContent = null;
@@ -54,10 +59,11 @@
   let backdropEl = null;
   let drawerOpen = false;
   let drawerMaximized = false;
-  let scrubberData = null;
+  let sceneData = null;
   let tileSets = [];
   let lastVideoTime = 0;
-  let dataCache = null;
+  let dataCache = new Map();
+  let drawerSceneId = null;
   let colIndex = 4;
 
   try {
@@ -80,7 +86,7 @@
   function tileWidthForRow() {
     const el = drawerContent || document.querySelector(".scene-thumbs-content");
     const cw = el ? el.clientWidth : 0;
-    if (!cw || !scrubberData) return 80;
+    if (!cw || !sceneData) return 80;
     const n = tilesPerRow();
     return Math.max(1, (cw - TILE_GAP * (n - 1)) / n);
   }
@@ -147,7 +153,6 @@
             cues
               ? {
                 cues,
-                img,
                 spriteUrl: paths.sprite,
                 spriteW: img.naturalWidth,
                 spriteH: img.naturalHeight,
@@ -159,9 +164,9 @@
   }
 
   function getData(id) {
-    if (dataCache && dataCache.id === id) return Promise.resolve(dataCache.data);
+    if (dataCache.has(id)) return Promise.resolve(dataCache.get(id));
     return loadSceneData(id).then((data) => {
-      dataCache = { id, data };
+      dataCache.set(id, data);
       return data;
     });
   }
@@ -182,8 +187,8 @@
   }
 
   function highlightSet(set, t) {
-    if (!scrubberData || !set.tiles.length) return;
-    const cues = scrubberData.cues;
+    if (!sceneData || !set.tiles.length) return;
+    const cues = sceneData.cues;
     let idx = 0;
     for (let i = 0; i < cues.length; i++) {
       if (cues[i].t <= t) idx = i;
@@ -204,7 +209,7 @@
   }
 
   function updateHighlight(t) {
-    if (!scrubberData) return;
+    if (!sceneData) return;
     for (const set of tileSets) highlightSet(set, t);
   }
 
@@ -214,15 +219,9 @@
       const t = player
         ? player.currentTime()
         : currentVideo && currentVideo.currentTime;
-      lastVideoTime = t || 0;
-    } catch (err) {
-      lastVideoTime = 0;
-    }
+      if (t) lastVideoTime = t;
+    } catch (err) { }
     updateHighlight(lastVideoTime);
-  }
-
-  function onTime() {
-    syncTime();
   }
 
   function attachListeners(video) {
@@ -231,30 +230,22 @@
       return;
     }
     if (currentVideo) {
-      currentVideo.removeEventListener("timeupdate", onTime);
-      currentVideo.removeEventListener("seeked", onTime);
-      currentVideo.removeEventListener("loadedmetadata", onTime);
-      currentVideo.removeEventListener("durationchange", onTime);
-      currentVideo.removeEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.removeEventListener(evt, syncTime);
     }
     currentVideo = video || null;
     if (syncTimer) clearInterval(syncTimer);
     syncTimer = null;
     if (currentVideo) {
-      currentVideo.addEventListener("timeupdate", onTime);
-      currentVideo.addEventListener("seeked", onTime);
-      currentVideo.addEventListener("loadedmetadata", onTime);
-      currentVideo.addEventListener("durationchange", onTime);
-      currentVideo.addEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.addEventListener(evt, syncTime);
       syncTimer = setInterval(syncTime, 500);
     }
     syncTime();
   }
 
-  function buildTiles(cont, data) {
+  function buildTiles(cont, data, sceneId) {
     const set = { tiles: [], highlighted: null };
     tileSets.push(set);
-    scrubberData = data;
+    sceneData = data;
 
     const cues = data.cues;
     const n = tilesPerRow();
@@ -303,9 +294,14 @@
       tile.appendChild(timeEl);
       tile.addEventListener("click", (function (t) {
         return function () {
-          seekTo(t);
-          closeDrawer();
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
+          if (player) {
+            seekTo(t);
+            closeDrawer();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          } else if (sceneId) {
+            window.location.assign("/scenes/" + sceneId + "?t=" + Math.round(t));
+          }
         };
       })(c.t));
       cont.appendChild(tile);
@@ -321,16 +317,15 @@
     s.textContent =
       ".scene-thumbs-backdrop{position:fixed;inset:0;z-index:1040;background:rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;}" +
       ".scene-thumbs-backdrop.open{opacity:1;pointer-events:auto;}" +
-      ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease;}" +
+      ".scene-thumbs-drawer{position:fixed;left:0;right:0;bottom:0;z-index:1050;height:66vh;max-height:66vh;display:flex;flex-direction:column;overflow:hidden;background:#202b33;border-top:1px solid #394b59;border-radius:.5rem .5rem 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.35);transform:translateY(105%);transition:transform .25s ease,height .25s ease,max-height .25s ease,border-radius .25s ease;}" +
       ".scene-thumbs-drawer.open{transform:translateY(0);}" +
       ".scene-thumbs-drawer.maximized{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;border-radius:0;}" +
-      ".scene-thumbs-drawer.scene-thumbs-section{border-bottom:none;}" +
       ".scene-thumbs-drawer .scene-thumbs-header{padding:0;display:flex;align-items:stretch;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn{display:flex;flex:1;align-items:center;gap:.35rem;padding:.55rem 1rem;border-radius:.25rem;}" +
       ".scene-thumbs-drawer .scene-thumbs-header-btn .scene-thumbs-chevron{margin-left:auto;}" +
-      ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
-      ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;}" +
-      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
+      ".scene-thumbs-drawer .scene-thumbs-toolbar{display:flex;justify-content:flex-end;align-items:center;margin-top:.5rem;padding:0 .5rem;}" +
+      ".scene-thumbs-drawer .scene-thumbs-size-control{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;}" +
+      ".scene-thumbs-drawer .scene-thumbs-content{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:2px;justify-content:flex-start;align-content:flex-start;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:.5rem;padding:.5rem .5rem 5rem .5rem;}";
     document.head.appendChild(s);
   }
 
@@ -341,7 +336,7 @@
     btn.type = "button";
     btn.className = "minimal scene-thumbs-header-btn";
     btn.title = "Close";
-    btn.appendChild(faIconNode(faLib.faTable));
+    btn.appendChild(faIconNode(faLib.faGrip));
     const label = document.createElement("span");
     label.textContent = "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
@@ -354,6 +349,22 @@
       closeDrawer();
     });
     head.appendChild(btn);
+
+    const maxBtn = document.createElement("button");
+    maxBtn.type = "button";
+    maxBtn.className = "minimal scene-thumbs-header-btn scene-thumbs-maximize";
+    maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
+    maxBtn.style.flex = "0";
+    const maxChevron = document.createElement("span");
+    maxChevron.className = "scene-thumbs-chevron";
+    maxChevron.appendChild(faIconNode(drawerMaximized ? faLib.faArrowsDownToLine : faLib.faArrowsUpToLine));
+    maxBtn.appendChild(maxChevron);
+    maxBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleMaximize();
+    });
+    head.appendChild(maxBtn);
+
     return head;
   }
 
@@ -379,7 +390,7 @@
     btn.className = "btn btn-secondary minimal scene-thumbs-toggle";
     btn.title = "Scene Thumbnails";
     btn.setAttribute("aria-label", "Scene Thumbnails");
-    btn.appendChild(faIconNode(faLib.faTable));
+    btn.appendChild(faIconNode(faLib.faGrip));
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       toggleDrawer();
@@ -393,17 +404,9 @@
     updateToggle();
   }
 
-  function buildSizes() {
-    const wrap = document.createElement("div");
-    wrap.className = "scene-thumbs-toolbar";
-
-    const control = document.createElement("div");
-    control.className = "scene-thumbs-size-control";
-    control.style.justifyContent = "flex-end";
-
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  function buildSizeInput() {
     let input;
-    if (isMobile) {
+    if (isMobile()) {
       input = document.createElement("select");
       input.className = "btn-secondary form-control";
       input.style.width = "120px";
@@ -416,40 +419,38 @@
       });
       updateSizeSelect(input);
       input.addEventListener("change", () => {
-        const v = parseInt(input.value, 10);
-        const n = isNaN(v) ? 2 : Math.max(0, Math.min(COL_OPTION_COUNT - 1, v));
-        setColsPerRow(n);
+        const rawIndex = parseInt(input.value, 10);
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTIONS.length - 1, rawIndex));
+        setColsPerRow(index);
       });
-      control.appendChild(input);
     } else {
       input = document.createElement("input");
       input.type = "range";
       input.min = "0";
-      input.max = String(COL_OPTION_COUNT - 1);
+      input.max = String(COL_OPTIONS.length - 1);
       input.step = "1";
       input.className = "zoom-slider";
       input.setAttribute("aria-label", "Thumbnails per row");
       updateSizeInput(input);
       input.addEventListener("input", () => {
-        const v = parseInt(input.value, 10);
-        const n = isNaN(v) ? 2 : Math.max(0, Math.min(COL_OPTION_COUNT - 1, v));
-        setColsPerRow(n);
+        const rawIndex = parseInt(input.value, 10);
+        const index = isNaN(rawIndex) ? colIndex : Math.max(0, Math.min(COL_OPTIONS.length - 1, rawIndex));
+        setColsPerRow(index);
       });
-      control.appendChild(input);
     }
+    return input;
+  }
+
+  function buildSizes() {
+    const wrap = document.createElement("div");
+    wrap.className = "scene-thumbs-toolbar";
+
+    const control = document.createElement("div");
+    control.className = "scene-thumbs-size-control";
+    control.style.justifyContent = "flex-end";
+    control.appendChild(buildSizeInput());
 
     wrap.appendChild(control);
-
-    const maxBtn = document.createElement("button");
-    maxBtn.type = "button";
-    maxBtn.className = "btn btn-secondary btn-sm scene-thumbs-maximize";
-    maxBtn.title = drawerMaximized ? "Restore" : "Maximize";
-    maxBtn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
-    maxBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      toggleMaximize();
-    });
-    wrap.appendChild(maxBtn);
 
     return wrap;
   }
@@ -467,13 +468,16 @@
     try {
       localStorage.setItem("sceneThumbnails.maximized", drawerMaximized ? "1" : "0");
     } catch (e) { }
-    if (drawerEl) drawerEl.classList.toggle("maximized", drawerMaximized);
-    if (sizesEl) {
-      const btn = sizesEl.querySelector(".scene-thumbs-maximize");
+    if (drawerEl) {
+      drawerEl.classList.toggle("maximized", drawerMaximized);
+      const btn = drawerEl.querySelector(".scene-thumbs-maximize");
       if (btn) {
         btn.title = drawerMaximized ? "Restore" : "Maximize";
-        btn.innerHTML = "";
-        btn.appendChild(faIconNode(drawerMaximized ? faLib.faCompress : faLib.faExpand));
+        const chevron = btn.querySelector(".scene-thumbs-chevron");
+        if (chevron) {
+          chevron.innerHTML = "";
+          chevron.appendChild(faIconNode(drawerMaximized ? faLib.faArrowsDownToLine : faLib.faArrowsUpToLine));
+        }
       }
     }
   }
@@ -495,10 +499,35 @@
   }
 
   function renderTiles() {
-    if (!drawerContent || !scrubberData) return;
+    if (!drawerContent || !sceneData) return;
     tileSets = [];
     drawerContent.innerHTML = "";
-    buildTiles(drawerContent, scrubberData);
+    buildTiles(drawerContent, sceneData, drawerSceneId);
+  }
+
+  function resizeTiles() {
+    if (!sceneData || !tileSets.length) return;
+    const cues = sceneData.cues;
+    const n = tilesPerRow();
+    const sizeW = tileWidthForRow();
+    const scale = sizeW / cues[0].w;
+    const tileH = Math.max(1, Math.round(cues[0].h * scale));
+    const bgSize =
+      Math.round(sceneData.spriteW * scale) + "px " + Math.round(sceneData.spriteH * scale) + "px";
+    const tileWidthPct = "calc((100% - " + TILE_GAP + "px * " + (n - 1) + ") / " + n + ")";
+    for (const set of tileSets) {
+      for (let i = 0; i < set.tiles.length; i++) {
+        const tile = set.tiles[i];
+        const c = cues[i];
+        tile.style.width = tileWidthPct;
+        tile.style.height = tileH + "px";
+        tile.style.maxWidth = tileWidthPct;
+        tile.style.flexBasis = tileWidthPct;
+        tile.style.backgroundSize = bgSize;
+        tile.style.backgroundPosition =
+          -Math.round(c.x * scale) + "px " + -Math.round(c.y * scale) + "px";
+      }
+    }
   }
 
   function scrollToHighlight() {
@@ -514,12 +543,14 @@
     if (!tile) return;
     const cr = scroller.getBoundingClientRect();
     const tr = tile.getBoundingClientRect();
-    scroller.scrollTop += tr.top - cr.top - (cr.height - tr.height) / 2;
+    const headerH = drawerEl ? drawerEl.querySelector(".scene-thumbs-header")?.offsetHeight || 0 : 0;
+    scroller.scrollTop += tr.top - cr.top - headerH - (cr.height - tr.height) / 2;
     scroller.scrollLeft += tr.left - cr.left - (cr.width - tr.width) / 2;
   }
 
   function openDrawer() {
     drawerOpen = true;
+    document.body.style.overflow = "hidden";
     if (drawerEl) drawerEl.classList.add("open");
     if (backdropEl) backdropEl.classList.add("open");
     updateToggle();
@@ -530,6 +561,7 @@
 
   function closeDrawer() {
     drawerOpen = false;
+    document.body.style.overflow = "";
     if (drawerEl) drawerEl.classList.remove("open");
     if (backdropEl) backdropEl.classList.remove("open");
     updateToggle();
@@ -548,7 +580,11 @@
   }
 
   function buildDrawer(id, data) {
-    if (drawerEl && drawerEl.isConnected) return;
+    if (drawerEl && drawerEl.isConnected && drawerSceneId === id) return;
+    if (drawerEl) { drawerEl.remove(); drawerEl = null; }
+    drawerSceneId = id;
+    sceneData = null;
+    tileSets = [];
     ensureStyles();
     buildBackdrop();
 
@@ -567,10 +603,29 @@
 
     drawerEl = drawer;
     drawerContent = content;
-    buildTiles(content, data);
+
+    if (data) {
+      buildTiles(content, data, id);
+      return;
+    }
+
+    const loading = document.createElement("div");
+    loading.style.cssText = "padding:2rem;text-align:center;color:#999;";
+    loading.textContent = "Loading thumbnails...";
+    content.appendChild(loading);
+
+    getData(id).then((d) => {
+      if (loading.isConnected) loading.remove();
+      if (!d) return;
+      if (drawerSceneId !== id) return;
+      tileSets = [];
+      buildTiles(content, d, id);
+      scrollToHighlight();
+    });
   }
 
   function teardown() {
+    document.body.style.overflow = "";
     if (toolbarBtnEl) {
       const toolbarWrap = toolbarBtnEl.parentNode;
       try {
@@ -604,11 +659,7 @@
       syncTimer = null;
     }
     if (currentVideo) {
-      currentVideo.removeEventListener("timeupdate", onTime);
-      currentVideo.removeEventListener("seeked", onTime);
-      currentVideo.removeEventListener("loadedmetadata", onTime);
-      currentVideo.removeEventListener("durationchange", onTime);
-      currentVideo.removeEventListener("play", onTime);
+      for (const evt of VIDEO_EVENTS) currentVideo.removeEventListener(evt, syncTime);
       currentVideo = null;
     }
   }
@@ -617,18 +668,19 @@
     if (e.key === "Escape" && drawerOpen) closeDrawer();
   });
 
-  let lastIsMobile = window.matchMedia("(max-width: 768px)").matches;
+  let lastIsMobile = isMobile();
 
   function onResize() {
     if (drawerOpen) {
-      renderTiles();
-      const isMobile = window.matchMedia("(max-width: 768px)").matches;
-      if (isMobile !== lastIsMobile) {
-        lastIsMobile = isMobile;
-        if (sizesEl && sizesEl.parentNode) {
-          const newControl = buildSizes();
-          sizesEl.replaceWith(newControl);
-          sizesEl = newControl;
+      resizeTiles();
+      const mobile = isMobile();
+      if (mobile !== lastIsMobile) {
+        lastIsMobile = mobile;
+        const oldControl = sizesEl && sizesEl.querySelector(".scene-thumbs-size-control");
+        if (oldControl) {
+          const newInput = buildSizeInput();
+          oldControl.textContent = "";
+          oldControl.appendChild(newInput);
         }
       }
     }
@@ -637,27 +689,72 @@
 
   function init() {
     const m = location.pathname.match(IDRE);
-    if (!m) {
-      teardown();
+    if (m) {
+      const id = m[1];
+
+      const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
+      if (!player) return;
+
+      if (currentSceneId !== id) {
+        teardown();
+        currentSceneId = id;
+      }
+
+      const video = player.el().querySelector("video") ?? null;
+      attachListeners(video);
+
+      getData(id).then((data) => {
+        if (!data) return;
+        buildToolbarButton();
+        buildDrawer(id, data);
+      });
       return;
     }
-    const id = m[1];
 
-    const player = window.PluginApi.utils.InteractiveUtils.getPlayer();
-    if (!player) return;
-
-    if (scrubberFor !== id) {
-      teardown();
-      scrubberFor = id;
+    if (location.pathname === "/" || /^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
+      initScenesList();
+      return;
     }
 
-    const video = player.el().querySelector("video") || player.el();
-    attachListeners(video);
+    teardown();
+  }
 
-    getData(id).then((data) => {
-      if (!data) return;
-      buildToolbarButton();
-      buildDrawer(id, data);
+  function initScenesList() {
+    document.querySelectorAll(".scene-card").forEach((card) => {
+      if (card.querySelector(".scene-thumbs-popover")) return;
+      const link = card.querySelector('a[href^="/scenes/"]');
+      if (!link) return;
+      const m = link.getAttribute("href").match(/\/scenes\/(\d+)/);
+      if (!m) return;
+      const id = m[1];
+      const wrap = document.createElement("div");
+      wrap.className = "scene-thumbs-popover";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "minimal btn btn-secondary";
+      btn.title = "Scene Thumbnails";
+      btn.appendChild(faIconNode(faLib.faGrip));
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        lastVideoTime = 0;
+        graphql("query($id: ID!){ findScene(id: $id) { resume_time files { duration } } }", { id })
+          .then((r) => {
+            const scene = r.data && r.data.findScene;
+            if (scene && scene.resume_time > 0 && scene.files && scene.files[0]) {
+              lastVideoTime = scene.resume_time;
+            }
+            buildDrawer(id);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                openDrawer();
+              });
+            });
+          });
+      });
+      wrap.appendChild(btn);
+      const popovers = card.querySelector(".card-popovers");
+      if (popovers) popovers.appendChild(wrap);
     });
   }
 
