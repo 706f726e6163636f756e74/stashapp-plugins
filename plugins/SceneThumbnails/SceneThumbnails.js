@@ -408,6 +408,7 @@
     btn.title = "Close";
     btn.appendChild(faIconNode(faLib.faGrip));
     const label = document.createElement("span");
+    label.className = "scene-thumbs-header-label";
     label.textContent = title || "Scene Thumbnails";
     const chevronIcon = document.createElement("span");
     chevronIcon.className = "scene-thumbs-chevron";
@@ -436,6 +437,12 @@
     head.appendChild(maxBtn);
 
     return head;
+  }
+
+  function setHeaderCount(drawer, count) {
+    if (!drawer) return;
+    const label = drawer.querySelector(".scene-thumbs-header-label");
+    if (label) label.textContent = label.textContent + " (" + count + ")";
   }
 
   function buildBackdrop() {
@@ -701,6 +708,7 @@
     drawerContent = content;
 
     if (data) {
+      setHeaderCount(drawer, data.cues ? data.cues.length : 0);
       buildTiles(content, data, id);
       return;
     }
@@ -714,6 +722,7 @@
       if (loading.isConnected) loading.remove();
       if (!d) return;
       if (drawerSceneId !== id) return;
+      setHeaderCount(drawer, d.cues ? d.cues.length : 0);
       tileSets = [];
       buildTiles(content, d, id);
       scrollToHighlight();
@@ -756,6 +765,7 @@
       if (loading.isConnected) loading.remove();
       if (!images) return;
       if (drawerSceneId !== id) return;
+      setHeaderCount(drawer, images.length);
       tileSets = [];
       buildGalleryTiles(content, images);
     });
