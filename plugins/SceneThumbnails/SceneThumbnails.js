@@ -60,6 +60,36 @@
   let sizesEl = null;
   let backdropEl = null;
   let drawerOpen = false;
+  let drawerHistoryId = null;
+  let nextHistoryId = 0;
+  let isDismissingHistory = false;
+
+  function isCurrentDrawerHistoryEntry() {
+    const s = window.history.state;
+    if (!s || typeof s !== "object") return false;
+    const drawer = s.sceneThumbsDrawer;
+    return drawer && drawer.id === drawerHistoryId;
+  }
+
+  function pushDrawerHistory() {
+    const id = nextHistoryId + 1;
+    nextHistoryId = id;
+    drawerHistoryId = id;
+    isDismissingHistory = false;
+    try {
+      window.history.pushState(
+        Object.assign(
+          {},
+          typeof window.history.state === "object" && window.history.state !== null
+            ? window.history.state
+            : {},
+          { sceneThumbsDrawer: { id } }
+        ),
+        "",
+        window.location.href
+      );
+    } catch (e) { }
+  }
   let drawerMaximized = false;
   let sceneData = null;
   let tileSets = [];
@@ -649,11 +679,15 @@
     scroller.scrollLeft += tr.left - cr.left - (cr.width - tr.width) / 2;
   }
 
-  function openDrawer() {
+  function openDrawer(skipHistory) {
+    const wasOpen = drawerOpen;
     drawerOpen = true;
     document.body.style.overflow = "hidden";
     if (drawerEl) drawerEl.classList.add("open");
     if (backdropEl) backdropEl.classList.add("open");
+    if (!wasOpen && !skipHistory) {
+      pushDrawerHistory();
+    }
     updateToggle();
     syncTime();
     renderTiles();
@@ -661,10 +695,19 @@
   }
 
   function closeDrawer() {
+    const wasOpen = drawerOpen;
     drawerOpen = false;
     document.body.style.overflow = "";
     if (drawerEl) drawerEl.classList.remove("open");
     if (backdropEl) backdropEl.classList.remove("open");
+    if (wasOpen) {
+      if (isCurrentDrawerHistoryEntry()) {
+        if (isDismissingHistory) return;
+        isDismissingHistory = true;
+        try { window.history.back(); } catch (e) { isDismissingHistory = false; }
+        return;
+      }
+    }
     updateToggle();
   }
 
@@ -803,6 +846,8 @@
     }
     backdropEl = null;
     tileSets = [];
+    drawerHistoryId = null;
+    isDismissingHistory = false;
     if (syncTimer) {
       clearInterval(syncTimer);
       syncTimer = null;
@@ -815,6 +860,22 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && drawerOpen) closeDrawer();
+  });
+
+  window.addEventListener("popstate", (e) => {
+    const s = e.state;
+    const historyId =
+      s && typeof s === "object" && s.sceneThumbsDrawer
+        ? s.sceneThumbsDrawer.id
+        : undefined;
+    if (drawerHistoryId !== undefined && historyId === drawerHistoryId) {
+      if (!drawerOpen) {
+        isDismissingHistory = false;
+        openDrawer(true);
+      }
+      return;
+    }
+    if (drawerOpen) closeDrawer();
   });
 
   let lastIsMobile = isMobile();
@@ -860,7 +921,13 @@
       return;
     }
 
-    if (location.pathname === "/" || /^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
+    if (location.pathname === "/") {
+      initScenesList();
+      initGalleriesList();
+      return;
+    }
+
+    if (/^\/(scenes|performers\/\d+\/scenes|studios\/\d+\/scenes|tags\/\d+\/scenes)\/?$/.test(location.pathname)) {
       initScenesList();
       return;
     }
