@@ -55,6 +55,9 @@
   let syncTimer = null;
   let currentSceneId = null;
   let toolbarBtnEl = null;
+  let scrubberBtnEl = null;
+  let scrubberBtnEnabled = true;
+  let settingsLoaded = false;
   let drawerEl = null;
   let drawerContent = null;
   let sizesEl = null;
@@ -131,6 +134,21 @@
   function graphql(query, variables) {
     return apolloClient.query({ query: gqlTag(query), variables })
       .then((r) => ({ data: r.data }));
+  }
+
+  function loadSettings() {
+    if (settingsLoaded) return Promise.resolve();
+    settingsLoaded = true;
+    return graphql("query { configuration { plugins } }")
+      .then((r) => {
+        const plugins =
+          (r.data && r.data.configuration && r.data.configuration.plugins) || {};
+        const cfg = plugins["SceneThumbnails"] || {};
+        scrubberBtnEnabled = cfg.showScrubberButton !== false;
+      })
+      .catch(() => {
+        scrubberBtnEnabled = true;
+      });
   }
 
   function loadImage(src) {
@@ -511,6 +529,31 @@
     updateToggle();
   }
 
+  function buildScrubberButton() {
+    if (!scrubberBtnEnabled) return;
+    if (scrubberBtnEl && scrubberBtnEl.isConnected) return;
+    const wrapper = document.querySelector(".scrubber-wrapper");
+    if (!wrapper) return;
+    const forwardBtn = document.getElementById("scrubber-forward");
+    if (!forwardBtn) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = forwardBtn.className || "";
+    btn.classList.add("scene-thumbs-toggle");
+    btn.style.width = "3.6rem";
+    btn.style.marginLeft = "7px";
+    btn.title = "Scene Thumbnails";
+    btn.setAttribute("aria-label", "Scene Thumbnails");
+    btn.appendChild(faIconNode(faLib.faGrip));
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleDrawer();
+    });
+    wrapper.insertBefore(btn, forwardBtn.nextSibling);
+    scrubberBtnEl = btn;
+    updateToggle();
+  }
+
   function buildSizeInput() {
     let input;
     if (isMobile()) {
@@ -717,10 +760,15 @@
   }
 
   function updateToggle() {
-    if (!toolbarBtnEl) return;
-    toolbarBtnEl.classList.toggle("active", drawerOpen);
-    toolbarBtnEl.title = drawerOpen ? "Hide Scene Thumbnails" : "Scene Thumbnails";
-    toolbarBtnEl.setAttribute("aria-pressed", String(drawerOpen));
+    if (toolbarBtnEl) {
+      toolbarBtnEl.classList.toggle("active", drawerOpen);
+      toolbarBtnEl.title = drawerOpen ? "Hide Scene Thumbnails" : "Scene Thumbnails";
+      toolbarBtnEl.setAttribute("aria-pressed", String(drawerOpen));
+    }
+    if (scrubberBtnEl) {
+      scrubberBtnEl.classList.toggle("active", drawerOpen);
+      scrubberBtnEl.setAttribute("aria-pressed", String(drawerOpen));
+    }
   }
 
   function buildDrawer(id, data) {
@@ -828,6 +876,12 @@
       }
     }
     toolbarBtnEl = null;
+    if (scrubberBtnEl) {
+      try {
+        scrubberBtnEl.remove();
+      } catch (e) { }
+    }
+    scrubberBtnEl = null;
     if (drawerEl) {
       try {
         drawerEl.remove();
@@ -915,8 +969,11 @@
 
       getData(id).then((data) => {
         if (!data) return;
-        buildToolbarButton();
-        buildDrawer(id, data);
+        loadSettings().then(() => {
+          buildToolbarButton();
+          buildScrubberButton();
+          buildDrawer(id, data);
+        });
       });
       return;
     }
